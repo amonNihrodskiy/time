@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Наше время</title>
+    <style>
+        /* Шрифты и база */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            /* Фоновый градиент как на скриншоте */
+            background: linear-gradient(135deg, #f5efeb 0%, #e8dad2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            color: #555;
+        }
+
+        /* Заголовок */
+        h1 {
+            font-weight: 300;
+            font-size: 2.5rem;
+            color: #d1668b;
+            margin-bottom: 40px;
+            letter-spacing: 1px;
+            text-align: center;
+        }
+
+        /* Контейнер для блоков */
+        .timer-wrapper {
+            display: flex;
+            gap: 20px;
+            z-index: 10;
+            padding: 0 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        /* Сами блоки (как на 2 скриншоте) */
+        .time-block {
+            background: #ffffff;
+            width: 170px;
+            height: 150px;
+            border-radius: 25px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+            transition: transform 0.3s ease;
+        }
+
+        .time-block:hover {
+            transform: translateY(-5px);
+        }
+
+        .number {
+            font-size: 3.5rem;
+            font-weight: 600;
+            color: #ff5e78; /* Тот самый розово-красный цвет */
+            line-height: 1;
+        }
+
+        .label {
+            font-size: 0.8rem;
+            color: #999;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-top: 10px;
+        }
+
+        /* Подпись внизу */
+        .footer-text {
+            margin-top: 50px;
+            font-size: 1rem;
+            color: #777;
+            font-style: italic;
+            z-index: 10;
+            text-align: center;
+        }
+
+        /* Дождь из сердечек */
+        .heart {
+            position: absolute;
+            color: #ffc0cb;
+            font-size: 18px;
+            user-select: none;
+            pointer-events: none;
+            z-index: 1;
+            animation: fall linear forwards;
+            opacity: 0.6;
+        }
+
+        @keyframes fall {
+            0% { transform: translateY(-10vh) rotate(0deg); opacity: 0; }
+            10% { opacity: 0.6; }
+            90% { opacity: 0.6; }
+            100% { transform: translateY(110vh) rotate(360deg); opacity: 0; }
+        }
+
+        /* Адаптивность для планшетов и телефонов */
+        @media (max-width: 768px) {
+            .time-block {
+                width: 140px;
+                height: 120px;
+            }
+            .number { font-size: 2.5rem; }
+            h1 { font-size: 1.8rem; }
+        }
+
+        @media (max-width: 480px) {
+            .timer-wrapper {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 15px;
+            }
+            .time-block {
+                width: auto;
+                height: 110px;
+            }
+            h1 { font-size: 1.5rem; padding: 0 10px; }
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Мы вместе уже</h1>
+
+    <div class="timer-wrapper">
+        <div class="time-block">
+            <span class="number" id="days">0</span>
+            <span class="label">дней</span>
+        </div>
+        <div class="time-block">
+            <span class="number" id="hours">0</span>
+            <span class="label">часов</span>
+        </div>
+        <div class="time-block">
+            <span class="number" id="minutes">0</span>
+            <span class="label">минут</span>
+        </div>
+        <div class="time-block">
+            <span class="number" id="seconds">0</span>
+            <span class="label">секунд</span>
+        </div>
+    </div>
+
+    <div class="footer-text">
+        Счастливое мгновение: 13 июня 2026 года, 23:59 ❤️
+    </div>
+
+    <script>
+        /**
+         * ЛОГИКА ВРЕМЕНИ
+         * 13 июня 23:59 Кишинев (GMT+3 летом) = 20:59 UTC.
+         * Используем UTC, чтобы и в Польше, и в Молдове счетчик был ОДИНАКОВЫМ.
+         */
+        const startDate = new Date(Date.UTC(2026, 5, 13, 20, 59, 0));
+
+        function updateTimer() {
+            const now = new Date();
+            const diff = now - startDate;
+
+            // Если дата в будущем, обнуляем или считаем до неё
+            const ms = diff < 0 ? 0 : diff;
+
+            const days = Math.floor(ms / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((ms / (1000 * 60 * 60)) % 24);
+            const minutes = Math.floor((ms / (1000 * 60)) % 60);
+            const seconds = Math.floor((ms / 1000) % 60);
+
+            document.getElementById('days').innerText = days;
+            document.getElementById('hours').innerText = hours;
+            document.getElementById('minutes').innerText = minutes;
+            document.getElementById('seconds').innerText = seconds;
+        }
+
+        setInterval(updateTimer, 1000);
+        updateTimer();
+
+        // Дождь из сердечек
+        function createHeart() {
+            const heart = document.createElement('div');
+            heart.classList.add('heart');
+            heart.innerHTML = '❤';
+            heart.style.left = Math.random() * 100 + 'vw';
+            
+            const size = Math.random() * 10 + 10;
+            heart.style.fontSize = size + 'px';
+            
+            const duration = Math.random() * 5 + 5;
+            heart.style.animationDuration = duration + 's';
+
+            document.body.appendChild(heart);
+            setTimeout(() => heart.remove(), duration * 1000);
+        }
+
+        setInterval(createHeart, 400);
+    </script>
+</body>
+</html>
