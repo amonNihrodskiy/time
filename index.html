@@ -129,33 +129,88 @@
             }
             h1 { font-size: 1.5rem; padding: 0 10px; }
         }
+
+        /* Комплимент дня */
+        .compliment-card {
+            margin-top: 35px;
+            max-width: 480px;
+            background: #ffffff;
+            border-radius: 25px;
+            padding: 25px 35px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+            text-align: center;
+            z-index: 10;
+            animation: fadeInUp 0.8s ease;
+        }
+
+        .compliment-label {
+            font-size: 0.75rem;
+            color: #d1668b;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 10px;
+        }
+
+        .compliment-text {
+            font-size: 1.05rem;
+            color: #555;
+            line-height: 1.6;
+            font-style: italic;
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(15px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Уточнение про часовой пояс под футером */
+        .tz-note {
+            display: block;
+            font-size: 0.75rem;
+            color: #aaa;
+            font-style: normal;
+            margin-top: 6px;
+        }
+
+        @media (max-width: 480px) {
+            .compliment-card {
+                max-width: 90vw;
+                padding: 20px 22px;
+            }
+            .compliment-text { font-size: 0.95rem; }
+        }
     </style>
 </head>
 <body>
 
-    <h1>Прошло времени</h1>
+    <h1>Прошло времени:</h1>
 
     <div class="timer-wrapper">
         <div class="time-block">
             <span class="number" id="days">0</span>
-            <span class="label">дней</span>
+            <span class="label" id="daysLabel">дней</span>
         </div>
         <div class="time-block">
             <span class="number" id="hours">0</span>
-            <span class="label">часов</span>
+            <span class="label" id="hoursLabel">часов</span>
         </div>
         <div class="time-block">
             <span class="number" id="minutes">0</span>
-            <span class="label">минут</span>
+            <span class="label" id="minutesLabel">минут</span>
         </div>
         <div class="time-block">
             <span class="number" id="seconds">0</span>
-            <span class="label">секунд</span>
+            <span class="label" id="secondsLabel">секунд</span>
         </div>
     </div>
 
+    <div class="compliment-card">
+        <div class="compliment-label">Комплимент дня</div>
+        <p class="compliment-text" id="complimentText"></p>
+    </div>
+
     <div class="footer-text">
-        День X: 13 июня 2026 года, 23:59 ❤️
+        День X: <span id="startLocal"></span> ❤️
     </div>
 
     <script>
@@ -165,6 +220,16 @@
          * Используем UTC, чтобы и в Польше, и в Молдове счетчик был ОДИНАКОВЫМ.
          */
         const startDate = new Date(Date.UTC(2026, 5, 13, 20, 59, 0));
+
+        // Правильное склонение слова после числа (1 день, 2 дня, 5 дней, 11 дней, 21 день...)
+        function pluralizeRu(n, one, few, many) {
+            const mod100 = Math.abs(n) % 100;
+            const mod10 = mod100 % 10;
+            if (mod100 > 10 && mod100 < 20) return many;
+            if (mod10 === 1) return one;
+            if (mod10 >= 2 && mod10 <= 4) return few;
+            return many;
+        }
 
         function updateTimer() {
             const now = new Date();
@@ -182,10 +247,52 @@
             document.getElementById('hours').innerText = hours;
             document.getElementById('minutes').innerText = minutes;
             document.getElementById('seconds').innerText = seconds;
+
+            document.getElementById('daysLabel').innerText = pluralizeRu(days, 'день', 'дня', 'дней');
+            document.getElementById('hoursLabel').innerText = pluralizeRu(hours, 'час', 'часа', 'часов');
+            document.getElementById('minutesLabel').innerText = pluralizeRu(minutes, 'минута', 'минуты', 'минут');
+            document.getElementById('secondsLabel').innerText = pluralizeRu(seconds, 'секунда', 'секунды', 'секунд');
         }
 
         setInterval(updateTimer, 1000);
         updateTimer();
+
+        /**
+         * Дата начала, показанная в ЛОКАЛЬНОМ времени посетителя.
+         * Сама точка во времени (startDate) не меняется — меняется
+         * только то, как она отображается. Поэтому из Польши будет
+         * видно 22:59, из Тирасполя/Кишинёва — 23:59, и т.д.
+         *
+         * Нюанс: на некоторых устройствах (особенно в Приднестровье,
+         * где "Тирасполь" просто нет в списке часовых поясов) браузер
+         * вместо нормальной зоны типа Europe/Chisinau определяет себя
+         * как "Etc/GMT-2" — это сырое фиксированное смещение, которое
+         * НИКОГДА не переводится на летнее/зимнее время само. Если видим
+         * такую зону — считаем, что это "не настоящая" зона, и берём
+         * Europe/Chisinau, у которой переход на летнее/зимнее время
+         * учитывается правильно. У всех остальных (настоящих городских)
+         * зон ничего не трогаем — им мы доверяем.
+         */
+        function getDisplayTimeZone() {
+            const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+            if (tz.startsWith('Etc/GMT')) {
+                return 'Europe/Chisinau';
+            }
+            return tz;
+        }
+
+        function formatLocalStart(date) {
+            return date.toLocaleString('ru-RU', {
+                timeZone: getDisplayTimeZone(),
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        document.getElementById('startLocal').innerText = formatLocalStart(startDate);
 
         // Дождь из сердечек
         function createHeart() {
@@ -205,6 +312,84 @@
         }
 
         setInterval(createHeart, 400);
+
+        /* ============================================
+           КОМПЛИМЕНТ ДНЯ
+           Выбирается по календарной дате (по местному
+           времени посетителя), поэтому при обновлении
+           страницы в течение одного дня текст не меняется,
+           а на следующий день — поменяется сам.
+           ============================================ */
+        const GIRL_NAME = "Вика"; // если нужно другое обращение — поменяй здесь
+
+        const compliments = [
+            "Ты делаешь обычные дни особенными просто тем, что ты рядом.",
+            "{name}, твоя улыбка — лучшее, что может случиться с моим утром.",
+            "Я благодарен судьбе за то, что нашёл тебя.",
+            "Рядом с тобой даже самые трудные дни становятся легче.",
+            "Ты умеешь слушать так, что хочется рассказать всё на свете.",
+            "{name}, ты самая тёплая часть моего дня.",
+            "Твоя доброта делает мир немного лучше.",
+            "Мне нравится, как ты смеёшься — искренне и от души.",
+            "С тобой я чувствую себя дома, где бы мы ни были.",
+            "Ты сильнее, чем сама думаешь.",
+            "{name}, ты вдохновляешь меня быть лучше каждый день.",
+            "Твои объятия — лучшее лекарство от плохого настроения.",
+            "Ты у меня самая красивая — и снаружи, и внутри.",
+            "Рядом с тобой время летит незаметно — и это здорово.",
+            "{name}, твоя забота согревает даже на расстоянии.",
+            "Ты делаешь меня счастливее, чем я был раньше.",
+            "Мне нравится, как ты загораешься, рассказывая о том, что любишь.",
+            "Ты — мой любимый человек во всей этой огромной вселенной.",
+            "{name}, спасибо, что ты есть.",   
+            "Я скучаю по тебе каждый раз, когда тебя нет рядом.",
+            "Ты умеешь находить хорошее даже в сложных ситуациях.",
+            "{name}, твой голос — то, что я хочу слышать каждый день.",
+            "Ты делаешь меня лучше просто своим присутствием в моей жизни.",
+            "Мне нравится твоё упорство — ты никогда не сдаёшься.",
+            "Ты заслуживаешь всего самого доброго, что есть на свете.",
+            "{name}, рядом с тобой я чувствую себя по-настоящему живым.",
+            "Твоя забота о близких — одна из самых красивых черт в тебе.",
+            "Я благодарен за каждый момент, который мы провели вместе.",
+            "Ты умеешь поддержать в самый нужный момент.",
+            "{name}, твоя энергия заряжает меня даже в плохие дни.",
+            "Мне нравится мечтать с тобой о будущем.",
+            "Ты — лучшее, что случилось со мной за последние годы.",
+            "{name}, твоя улыбка стоит тысячи слов.",
+            "Мне нравятся наши разговоры — даже о всякой мелочи.",
+            "Ты умеешь делать праздник из самых простых вещей.",
+            "С тобой я не боюсь быть собой.",
+            "{name}, ты делаешь мою жизнь ярче с каждым днём.",
+            "Сегодня особенный день — потому что в нём есть ты."
+        ];
+
+        function getLocalDayIndex() {
+            const now = new Date();
+            // считаем "сегодня" по местной дате посетителя (год-месяц-день),
+            // а не по времени, поэтому в течение дня индекс не меняется
+            const localMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            return Math.floor(localMidnight.getTime() / 86400000);
+        }
+
+        // Простое детерминированное "перемешивание": для одного и того же
+        // дня всегда даёт один и тот же результат, но между соседними
+        // днями результат выглядит случайным, а не идёт по кругу подряд
+        function hashDay(n) {
+            n = (n ^ 61) ^ (n >>> 16);
+            n = (n + (n << 3)) | 0;
+            n = n ^ (n >>> 4);
+            n = Math.imul(n, 0x27d4eb2d);
+            n = n ^ (n >>> 15);
+            return n >>> 0;
+        }
+
+        function getTodayCompliment() {
+            const dayIndex = getLocalDayIndex();
+            const index = hashDay(dayIndex) % compliments.length;
+            return compliments[index].replace('{name}', GIRL_NAME);
+        }
+
+        document.getElementById('complimentText').innerText = getTodayCompliment();
     </script>
 </body>
 </html>
